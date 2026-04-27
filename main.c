@@ -22,7 +22,7 @@ void jv_strcpy(unsigned char *dest, const unsigned char *src) {
     while ((*dest++ = *src++) != '\0');
 }
 
-char* get_memory_block(char* memory){
+/*char* get_memory_block(char* memory){
     int i;
     static bool is_rand_init=false;
     if (!is_rand_init){
@@ -36,7 +36,7 @@ char* get_memory_block(char* memory){
         block_id = (rand() % (BLOCK_COUNT-1))+1;
     memory[block_id]=1;
     return (&memory[WORD_COUNT_IN_BLOCK*WORD_SIZE*block_id]);
-}
+}*/
 
 int set_memory_block(unsigned char* memory,unsigned char proc_id,const int block_number,unsigned char* value_to_set){
     if (memory==NULL)
@@ -100,6 +100,15 @@ char* get_message(const int code){
     
 }
 
+char read_char() {
+    int c = getchar();
+    int discard;
+
+    while ((discard = getchar()) != '\n' && discard != EOF);
+
+    return c;
+}
+
 void print_memory(unsigned char *memory,bool is_hex){
     int i,j,k;
     
@@ -122,7 +131,9 @@ void print_memory(unsigned char *memory,bool is_hex){
             for (k=0;k<WORD_SIZE;++k){
                 const int offset=i*(WORD_COUNT_IN_BLOCK*WORD_SIZE)+j*WORD_SIZE+k;
                 if (offset<USED_PAGES_MAP_SIZE){
-                    putc('*',stdout);
+                    if (is_hex)
+                        fputs("**",stdout);
+                    else putc('*',stdout);
                     continue;
                 }   
                 if (is_hex)
@@ -139,6 +150,10 @@ int main(int arg_c,char **arg_v){
         fprintf(stderr,"%s\n","Netinkamas programos parametru skaicius");
         return 1;
     }
+    if (arg_c == 2 && (strcmp(arg_v[1],"\?")==0)){
+       printf("%s%s%s\n","programos naudojimo pavyzdys ",arg_v[0]," <kartojimu skaicius>");
+       return 0;
+    }
     int i,error;
     char proccesses[]={'A','B','C','D','E','F','G','H'};
     unsigned char *memory = (unsigned char*) calloc(sizeof(unsigned char),WORD_SIZE*WORD_COUNT_IN_BLOCK*BLOCK_COUNT);
@@ -150,7 +165,12 @@ int main(int arg_c,char **arg_v){
         return 1;
     }
     
-    print_memory(memory,false);
+    bool is_hex=false;
+    if (arg_c >= 3)
+        if (strcmp(arg_v[2],"--hex")==0)
+            is_hex=true;
+    
+    print_memory(memory,is_hex);
     puts("---------------------------------------------------------------------------------");
     
     const int iteration_count = atoi(arg_v[1]);
@@ -171,10 +191,32 @@ int main(int arg_c,char **arg_v){
         }
     
     }
-    print_memory(memory,false);
-    char choice=0;
-    puts("Ar ieskosite konkretaus proceso duomenu bloku?");
-    if (getc(stdin);
+    if (iteration_count != 0)
+        print_memory(memory,is_hex);
+    bool is_time_to_exit=false;
+    
+    do{ 
+        unsigned char proc_id;
+
+        puts("Ar ieskosite konkretaus proceso duomenu bloku?");
+        char choice=read_char();
+        if ((choice=='t')||(choice=='T')){
+            puts("Iveskite proceso indentifikatoriu");
+            proc_id=read_char();
+            for (i=0;i<BLOCK_COUNT;++i)
+                if (memory[i]==proc_id){
+                    puts("Radau");
+                    break;
+                }
+        }
+        else if ((choice=='n')||(choice=='N')){
+                 is_time_to_exit=true;
+                 break;
+             }
+             else puts("Blogas pasirinkimas"); 
+        choice=0;         
+        
+    }while (!is_time_to_exit);
     free(memory);
     return 0; 
 }
