@@ -7,8 +7,14 @@
 #define BLOCK_COUNT 64
 #define WORD_COUNT_IN_BLOCK 16
 #define WORD_SIZE 4
+#define PAGES_PER_PROCESS 4
+
+#define PTR 5
+#define PTR_SIZE 1
+
 
 const int USED_PAGES_MAP_SIZE = BLOCK_COUNT /(WORD_COUNT_IN_BLOCK*WORD_SIZE);
+const int SYMBOL_COUNT_IN_BLOCK=WORD_COUNT_IN_BLOCK*WORD_SIZE;
 
 int jv_strlen(unsigned char *str) {
     int len = 0;
@@ -41,13 +47,17 @@ void jv_strcpy(unsigned char *dest, const unsigned char *src) {
 int set_memory_block(unsigned char* memory,unsigned char proc_id,const int block_number,unsigned char* value_to_set){
     if (memory==NULL)
         return 1;
-    const int SYMBOL_COUNT_IN_BLOCK=WORD_COUNT_IN_BLOCK*WORD_SIZE;    
+        
     if (((int)jv_strlen(value_to_set))>SYMBOL_COUNT_IN_BLOCK)
         return 2;
     if (memory[block_number]!=0)
         return 3;    
     jv_strcpy(&memory[block_number*SYMBOL_COUNT_IN_BLOCK],value_to_set);
     memory[block_number]=proc_id;
+    //const int OFFSET = SYMBOL_COUNT_IN_BLOCK*PTR+block_number;
+    //int i;
+    //for (i=0;i<SYMBOL_COUNT_IN_BLOCK;++i)
+    //memory[OFFSET+i]=proc_id;
     return 0;        
 }
 
@@ -69,11 +79,15 @@ int set_memory(unsigned char* memory,unsigned char proc_id,unsigned char **value
     for (i=0;i<values_to_set_count;++i){
         unsigned char random_block_id;
         do{
-            random_block_id=abs(rand())%(BLOCK_COUNT-USED_PAGES_MAP_SIZE)+USED_PAGES_MAP_SIZE;
+            do{ 
+                random_block_id=abs(rand())%(BLOCK_COUNT-USED_PAGES_MAP_SIZE)+USED_PAGES_MAP_SIZE;
+            }
+            while ((random_block_id>=PTR)&&(random_block_id<(PTR+PTR_SIZE)));
             if (failed_memory_alloc_count++ > 100)
-                return 6;
+                return 6;    
             
         }while (set_memory_block(memory,proc_id,random_block_id,values_to_set[i]));
+        failed_memory_alloc_count=0;
     }
         
     return 0;
